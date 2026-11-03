@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#153b2a">
+<title>روليت الخضار</title>
+<style>
+:root{color-scheme:dark;--bg:#0e1e17;--panel:#193328;--line:#315543;--accent:#8ee0a6;--muted:#b8cabe}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#244b37,#0e1e17 58%);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#f4fff7;padding:18px}
+main{max-width:760px;margin:auto}.head{text-align:center;padding:12px 0 20px}.head h1{margin:4px;font-size:30px}.head p{color:var(--muted);margin:4px}
+.panel{background:#193328eF;border:1px solid var(--line);border-radius:18px;padding:16px;margin:13px 0;box-shadow:0 10px 28px #0003}
+.wheel{min-height:190px;display:grid;place-items:center;text-align:center;background:linear-gradient(145deg,#234c37,#142a20);border:2px solid #5e9d70;border-radius:22px;padding:20px}
+.emoji{font-size:68px;line-height:1.25}.winner{font-size:27px;font-weight:800}.mult{color:var(--accent);font-weight:700;font-size:19px}
+button, input,select{font:inherit}button{border:0;border-radius:12px;padding:12px 16px;background:var(--accent);color:#102719;font-weight:800;cursor:pointer}
+button.secondary{background:#315543;color:#fff}button.danger{background:#703a3a;color:white}button:disabled{opacity:.45;cursor:not-allowed}
+.actions{display:flex;gap:9px;flex-wrap:wrap;justify-content:center;margin-top:14px}
+label{display:block;color:var(--muted);font-size:14px;margin:10px 0 5px}
+input,select{width:100%;background:#0f241a;border:1px solid var(--line);border-radius:10px;padding:10px;color:white}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px}
+.veggie{border:1px solid var(--line);border-radius:13px;padding:10px;background:#10251b}
+.veggie strong{display:block;margin-bottom:7px}.veggie .row{display:flex;align-items:center;gap:7px}.veggie input{min-width:0}
+.small{font-size:12px;color:var(--muted)}.history{max-height:220px;overflow:auto}.history-item{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:8px 2px}
+.notice{font-size:13px;color:#d3e6d8;line-height:1.7}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:430px){.two{grid-template-columns:1fr}}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<main>
+ <header class="head"><div style="font-size:38px">🎰🥕🍅</div><h1>روليت الخضار</h1><p>لعبة تجريبية مستقلة — تحكم بالتوقيت والاحتمالات</p></header>
+ <section class="panel">
+  <div class="wheel" aria-live="polite">
+   <div id="emoji" class="emoji">🥕</div><div id="result" class="winner">جاهز للعب</div><div id="mult" class="mult">اضغط تشغيل</div>
+  </div>
+  <div class="actions">
+   <button id="spin">🎲 أظهر نتيجة الآن</button>
+   <button id="auto" class="secondary">▶ تشغيل تلقائي</button>
+   <button id="stop" class="danger" disabled>■ إيقاف</button>
+  </div>
+  <p class="small" style="text-align:center">الوقت المتبقي: <b id="countdown">—</b></p>
+ </section>
+ <section class="panel">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+   <h2 style="margin:0">🔐 لوحة تحكم المالك</h2>
+   <span id="adminState" class="small">مقفلة</span>
+  </div>
+  <div id="adminLogin" class="two" style="margin-top:12px">
+   <div><label for="adminPin">رمز دخول المالك</label><input id="adminPin" type="password" inputmode="numeric" placeholder="أدخل الرمز"></div>
+   <div style="display:flex;align-items:end"><button id="unlock" style="width:100%">فتح لوحة التحكم</button></div>
+  </div>
+  <p class="small">رمز البداية: 2468 — غيّره بعد أول دخول. القفل محلي داخل هذا التطبيق وعلى هذا الجهاز.</p>
+ </section>
+ <section class="panel hidden" id="settingsPanel">
+  <h2 style="margin-top:0">⚙️ إعدادات اللعبة</h2>
+  <div class="two">
+   <div><label for="interval">الفاصل بين النتائج (ثانية)</label><input id="interval" type="number" min="1" max="3600" value="10"></div>
+   <div><label for="mode">طريقة اختيار النتيجة</label><select id="mode"><option value="weighted">عشوائي حسب النسب</option><option value="manual">نتيجة محددة من الإدارة</option></select></div>
+  </div>
+  <div id="manualWrap" class="hidden"><label for="forced">النتيجة التي تريد إظهارها</label><select id="forced"></select><p class="small">هذا الخيار يتحكم بنتائج هذه اللعبة المحلية فقط.</p></div>
+  <h3>الخضار والمضاعفات والاحتمالات</h3>
+  <div id="veggies" class="grid"></div>
+  <div class="actions"><button id="add" class="secondary">＋ إضافة خضار</button><button id="save" class="secondary">حفظ الإعدادات</button><button id="reset" class="secondary">إعادة الافتراضي</button><button id="lock" class="danger">قفل لوحة التحكم</button></div>
+  <div class="two">
+   <div><label for="newPin">تغيير رمز المالك</label><input id="newPin" type="password" inputmode="numeric" placeholder="رمز جديد من 4 أرقام أو أكثر"></div>
+   <div style="display:flex;align-items:end"><button id="changePin" class="secondary" style="width:100%">حفظ الرمز الجديد</button></div>
+  </div>
+  <p class="small">مجموع الأوزان يُحوَّل تلقائياً إلى نسب مئوية. اجعل وزن الخضار 0 لمنع ظهورها في السحب العشوائي.</p>
+ </section>
+ <section class="panel">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="margin:0">📜 سجل النتائج</h2><button id="clear" class="secondary">مسح السجل</button></div>
+  <div id="history" class="history"><p class="small">لا توجد نتائج بعد.</p></div>
+ </section>
+ <section class="panel notice">
+  <b>تنبيه:</b> هذه لعبة محاكاة مستقلة. لا تتصل ببيجو لايف ولا تكشف أو تتنبأ بنتائج خوادمه. وضع الإدارة المحددة يغيّر نتيجة لعبتك التجريبية فقط.
+ </section>
+</main>
+<script>
+const defaults=[
+ {name:"جزر",emoji:"🥕",mult:5,weight:25},
+ {name:"طماطم",emoji:"🍅",mult:5,weight:25},
+ {name:"ذرة",emoji:"🌽",mult:5,weight:25},
+ {name:"ملفوف",emoji:"🥬",mult:5,weight:25},
+ {name:"ساندويتش",emoji:"🥪",mult:10,weight:10},
+ {name:"مشاوي",emoji:"🍢",mult:15,weight:8},
+ {name:"عظم",emoji:"🦴",mult:25,weight:4},
+ {name:"ستيك",emoji:"🥩",mult:45,weight:2}
+];
+let items=defaults.map(x=>({...x})),timer=null,tick=null,nextAt=0,history=[];
+let adminUnlocked=false, adminPin=localStorage.getItem('vegRouletteAdminPin')||'2468';
+const $=id=>document.getElementById(id);
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function render(){
+ $('veggies').innerHTML=items.map((v,i)=>`<div class="veggie"><strong>${esc(v.emoji)} ${esc(v.name)}</strong><label>الاسم</label><input data-i="${i}" data-k="name" value="${esc(v.name)}"><div class="two"><div><label>المضاعف ×</label><input type="number" min="1" data-i="${i}" data-k="mult" value="${v.mult}"></div><div><label>الوزن</label><input type="number" min="0" data-i="${i}" data-k="weight" value="${v.weight}"></div></div><label>رمز تعبيري</label><input data-i="${i}" data-k="emoji" value="${esc(v.emoji)}"><button class="danger" style="width:100%;margin-top:8px" data-remove="${i}">حذف</button></div>`).join('');
+ document.querySelectorAll('[data-i]').forEach(el=>el.addEventListener('change',e=>{let i=+e.target.dataset.i,k=e.target.dataset.k;items[i][k]=k==='mult'||k==='weight'?Math.max(0,Number(e.target.value)||0):e.target.value;renderForced();}));
+ document.querySelectorAll('[data-remove]').forEach(el=>el.addEventListener('click',e=>{items.splice(+e.target.dataset.remove,1);render();renderForced();}));
+ renderForced();
+}
+function renderForced(){ $('forced').innerHTML=items.map((v,i)=>`<option value="${i}">${esc(v.emoji)} ${esc(v.name)}</option>`).join(''); }
+function choose(){
+ if(!items.length) return null;
+ if($('mode').value==='manual')return items[Number($('forced').value)]||items[0];
+ let active=items.filter(x=>x.weight>0),total=active.reduce((s,x)=>s+x.weight,0);
+ if(!total)return null;
+ let n=Math.random()*total;for(const x of active){n-=x.weight;if(n<0)return x;}return active[active.length-1];
+}
+function showResult(){
+ const v=choose();if(!v){$('result').textContent='لا توجد أوزان فعالة';$('mult').textContent='ارفع وزن خضار واحدة على الأقل';return;}
+ $('emoji').textContent=v.emoji;$('result').textContent=v.name;$('mult').textContent='المضاعف ×'+v.mult;
+ history.unshift({...v,time:new Date().toLocaleTimeString('ar-IQ')});history=history.slice(0,50);renderHistory();
+}
+function renderHistory(){$('history').innerHTML=history.length?history.map((v,i)=>`<div class="history-item"><span>${i+1}. ${esc(v.emoji)} ${esc(v.name)} <b>×${v.mult}</b></span><span class="small">${v.time}</span></div>`).join(''):'<p class="small">لا توجد نتائج بعد.</p>';}
+function stop(){clearInterval(timer);clearInterval(tick);timer=tick=null;$('auto').disabled=false;$('stop').disabled=true;$('countdown').textContent='—';}
+function start(){stop();let sec=Math.max(1,Math.min(3600,Number($('interval').value)||10));$('auto').disabled=true;$('stop').disabled=false;nextAt=Date.now()+sec*1000;tick=setInterval(()=>{let left=Math.max(0,Math.ceil((nextAt-Date.now())/1000));$('countdown').textContent=left+' ث';},200);timer=setInterval(()=>{showResult();nextAt=Date.now()+sec*1000;},sec*1000);$('countdown').textContent=sec+' ث';}
+function setAdmin(unlocked){
+ adminUnlocked=unlocked;
+ $('settingsPanel').classList.toggle('hidden',!unlocked);
+ $('adminLogin').classList.toggle('hidden',unlocked);
+ $('adminState').textContent=unlocked?'مفتوحة':'مقفلة';
+}
+$('unlock').onclick=()=>{
+ if($('adminPin').value===adminPin){$('adminPin').value='';setAdmin(true);}
+ else alert('رمز الدخول غير صحيح.');
+};
+$('lock').onclick=()=>setAdmin(false);
+$('changePin').onclick=()=>{
+ const p=$('newPin').value.trim();
+ if(p.length<4){alert('اختر رمزاً من 4 خانات على الأقل.');return;}
+ adminPin=p;localStorage.setItem('vegRouletteAdminPin',adminPin);$('newPin').value='';
+ alert('تم تغيير رمز المالك على هذا الجهاز.');
+};
+$('spin').onclick=showResult;$('auto').onclick=start;$('stop').onclick=stop;
+$('mode').onchange=()=> $('manualWrap').classList.toggle('hidden',$('mode').value!=='manual');
+$('add').onclick=()=>{items.push({name:'خضار جديد',emoji:'🥒',mult:5,weight:10});render();};
+$('save').onclick=()=>{localStorage.setItem('vegRouletteSettings',JSON.stringify({items,interval:$('interval').value,mode:$('mode').value,forced:$('forced').value}));alert('تم حفظ الإعدادات على هذا الجهاز.');};
+$('reset').onclick=()=>{stop();items=defaults.map(x=>({...x}));$('interval').value=10;$('mode').value='weighted';$('manualWrap').classList.add('hidden');render();};
+$('clear').onclick=()=>{history=[];renderHistory();};
+try{let s=JSON.parse(localStorage.getItem('vegRouletteSettings'));if(s&&Array.isArray(s.items)){items=s.items;$('interval').value=s.interval||10;$('mode').value=s.mode||'weighted';$('manualWrap').classList.toggle('hidden',$('mode').value!=='manual');}}catch(e){}
+setAdmin(false);render();if(localStorage.getItem('vegRouletteSettings')){try{let s=JSON.parse(localStorage.getItem('vegRouletteSettings'));if(s.forced!==undefined)$('forced').value=s.forced;}catch(e){}}
+</script>
+</body></html>
